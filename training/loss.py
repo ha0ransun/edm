@@ -9,6 +9,7 @@
 "Elucidating the Design Space of Diffusion-Based Generative Models"."""
 
 import torch
+import numpy as np
 from torch_utils import persistence
 
 #----------------------------------------------------------------------------
@@ -80,3 +81,31 @@ class EDMLoss:
         return loss
 
 #----------------------------------------------------------------------------
+# Improved loss function proposed in the paper "Consistency Models"
+
+@persistence.persistent_class
+class CTLoss:
+    def __init__(self, N=2, rho=7, sigma_min=0.002, sigma_max=80., sigma_data=0.5):
+        self.N = N
+        self.rho = rho
+        self.s_min = sigma_min
+        self.s_max = sigma_max
+        self.s_data = sigma_data
+
+    def __call__(self, net, net_target, images, labels=None, augment_pipe=None):
+        rnd_idx = torch.randint(1, self.N, [images.shape[0], 1, 1, 1], device=images.device)
+        n_steps = torch.arange(self.N, dtype=torch.float64, device=images.device)
+        all_sigma = (self.s_max ** (1 / self.rho) + n_steps / (self.N - 1) * (self.s_min ** (1 / self.rho) - self.s_max ** (1 / self.rho))) ** self.rho
+        # intuitively, using smaller sigma in target net could be helpful
+        sigma = all_sigma[rnd_idx - 1]
+        sigma_target = all_sigma[rnd_idx]
+        y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
+        z = torch.randn_like(y)
+        n = z * sigma
+        n_target = z * sigma_target
+        D_yn = net(y + n, sigma, labels, augment_labels=augment_labels)
+        D_yn_target = net(y + n_target, sigma_target, labels, augment_labels=augment_labels)
+        loss = (D_yn - D_yn_target) ** 2
+        return loss
+        
+
