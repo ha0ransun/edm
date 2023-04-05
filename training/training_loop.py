@@ -90,8 +90,8 @@ def training_loop(
     augment_pipe = dnnlib.util.construct_class_by_name(**augment_kwargs) if augment_kwargs is not None else None # training.augment.AugmentPipe
     ddp = torch.nn.parallel.DistributedDataParallel(net, device_ids=[device], broadcast_buffers=False)
     ema = copy.deepcopy(net).eval().requires_grad_(False)
-    if loss_kwargs.class_name == 'training.loss.CTloss':
-        ddp_target = torch.nn.parallel.DistributedDataParallel(ema, device_ids=[device], broadcast_buffers=False)
+    # if loss_kwargs.class_name == 'training.loss.CTLoss':
+    #     ddp_target = torch.nn.parallel.DistributedDataParallel(ema, device_ids=[device], broadcast_buffers=False)
 
     # Resume training from previous snapshot.
     if resume_pkl is not None:
@@ -125,7 +125,7 @@ def training_loop(
     while True:
 
         if loss_kwargs.class_name == 'training.loss.CTLoss':
-            N = np.ceil(np.sqrt(cur_nimg / (total_kimg * 1000) * ((s_1 + 1) ** 2 - s_0 ** 2) + s_0 ** 2))
+            N = int(np.ceil(np.sqrt(cur_nimg / (total_kimg * 1000) * ((s_1 + 1) ** 2 - s_0 ** 2) + s_0 ** 2)))
             loss_fn.N = N
         # Accumulate gradients.
         optimizer.zero_grad(set_to_none=True)
@@ -135,7 +135,7 @@ def training_loop(
                 images = images.to(device).to(torch.float32) / 127.5 - 1
                 labels = labels.to(device)
                 if loss_kwargs.class_name == 'training.loss.CTLoss':
-                    loss = loss_fn(net=ddp, net_target=ddp_target, images=images, labels=labels, augment_pipe=augment_pipe)
+                    loss = loss_fn(net=ddp, net_target=ema, images=images, labels=labels, augment_pipe=augment_pipe)
                 else:
                     loss = loss_fn(net=ddp, images=images, labels=labels, augment_pipe=augment_pipe)
                 training_stats.report('Loss/loss', loss)

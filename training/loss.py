@@ -103,8 +103,8 @@ class CTLoss:
         z = torch.randn_like(y)
         n = z * sigma
         n_target = z * sigma_target
+        D_yn_target = net_target(y + n_target, sigma_target, labels, augment_labels=augment_labels)
         D_yn = net(y + n, sigma, labels, augment_labels=augment_labels)
-        D_yn_target = net(y + n_target, sigma_target, labels, augment_labels=augment_labels)
         loss = (D_yn - D_yn_target) ** 2
         return loss
         
