@@ -129,13 +129,13 @@ class TestLoss:
         sigma = all_sigma[rnd_idx - 1]
         sigma_target = all_sigma[rnd_idx]
         y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
-        y_n = y + torch.randn_like(y) * sigma
-        cdist = torch.cdist(y_n.view(b_size, -1), images.view(b_size, -1).double())
+        yn = y + torch.randn_like(y) * sigma
+        cdist = torch.cdist(yn.view(b_size, -1), images.view(b_size, -1).double())
         logp = - 2 * cdist / (sigma + sigma_target).squeeze() ** 2
-        grad = (torch.softmax(logp, dim=1) @ images.view(b_size, -1).double()).view(images.shape)
-        y_nm1 = (y_n + grad * (sigma_target / sigma - 1)).detach()
-        D_yn_target = net_target(y_nm1, sigma_target, labels, augment_labels=augment_labels)
-        D_yn = net(y_n, sigma, labels, augment_labels=augment_labels)
+        grad = (torch.softmax(logp, dim=1) @ (yn - images).view(b_size, -1).double()).view(images.shape) / sigma
+        yn_target = (yn + grad * (sigma_target - sigma)).detach()
+        D_yn_target = net_target(yn_target, sigma_target, labels, augment_labels=augment_labels)
+        D_yn = net(yn, sigma, labels, augment_labels=augment_labels)
         loss = (D_yn - D_yn_target) ** 2
         return loss
 
