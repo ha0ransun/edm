@@ -134,7 +134,7 @@ def training_loop(
                 images, labels = next(dataset_iterator)
                 images = images.to(device).to(torch.float32) / 127.5 - 1
                 labels = labels.to(device)
-                if loss_kwargs.class_name == 'training.loss.CTLoss':
+                if loss_kwargs.class_name == 'training.loss.CTLoss' or loss_kwargs.class_name == 'training.loss.TestLoss':
                     loss = loss_fn(net=ddp, net_target=ema, images=images, labels=labels, augment_pipe=augment_pipe)
                 else:
                     loss = loss_fn(net=ddp, images=images, labels=labels, augment_pipe=augment_pipe)
