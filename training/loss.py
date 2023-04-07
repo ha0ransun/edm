@@ -133,10 +133,11 @@ class TestLoss:
         y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
         yn = y + torch.randn_like(y) * sigma
         cdist = torch.cdist(yn.view(b_size, -1), images.view(b_size, -1).double())
-        logp = - 2 * cdist / (sigma + sigma_target).squeeze() ** 2
-        logp += torch.diag(torch.ones_like(logp) * scale)
-        grad = (torch.softmax(logp, dim=1) @ (yn - images).view(b_size, -1).double()).view(images.shape) / sigma
-        yn_target = (yn + grad * (sigma_target - sigma)).detach()
+        logp = - 2 * cdist / (sigma + sigma_target).view(b_size, 1) ** 2
+        logp += torch.diag(torch.ones_like(torch.diag(logp)) * scale)
+        # b * 1 * b @ (b * 1 * d - 1 * b * d) = b * 1 * d -> b * d
+        grad = (torch.softmax(logp, dim=1).unsqueeze(1) @ (yn.unsqueeze(1) - images.unsqueeze(0).double()).view(b_size, b_size, -1)).squeeze(1)
+        yn_target = (yn + grad.view(images.shape) / sigma * (sigma_target - sigma)).detach()
         D_yn_target = net_target(yn_target, sigma_target, labels, augment_labels=augment_labels)
         D_yn = net(yn, sigma, labels, augment_labels=augment_labels)
         loss = (D_yn - D_yn_target) ** 2
