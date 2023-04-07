@@ -114,15 +114,17 @@ class CTLoss:
 
 @persistence.persistent_class
 class TestLoss:
-    def __init__(self, N=2, rho=7, sigma_min=0.002, sigma_max=80., sigma_data=0.5):
+    def __init__(self, N=2, rho=7, data_size=50000, sigma_min=0.002, sigma_max=80., sigma_data=0.5):
         self.N = N
         self.rho = rho
+        self.data_size = data_size
         self.s_min = sigma_min
         self.s_max = sigma_max
         self.s_data = sigma_data
 
     def __call__(self, net, net_target, images, labels=None, augment_pipe=None):
         b_size = images.shape[0]
+        scale = np.log((b_size - 1) / (self.data_size - 1))
         rnd_idx = torch.randint(1, self.N, [b_size, 1, 1, 1], device=images.device)
         n_steps = torch.arange(self.N, dtype=torch.float64, device=images.device)
         all_sigma = (self.s_max ** (1 / self.rho) + n_steps / (self.N - 1) * (self.s_min ** (1 / self.rho) - self.s_max ** (1 / self.rho))) ** self.rho
@@ -132,6 +134,7 @@ class TestLoss:
         yn = y + torch.randn_like(y) * sigma
         cdist = torch.cdist(yn.view(b_size, -1), images.view(b_size, -1).double())
         logp = - 2 * cdist / (sigma + sigma_target).squeeze() ** 2
+        logp += torch.diag(torch.ones_like(logp) * scale)
         grad = (torch.softmax(logp, dim=1) @ (yn - images).view(b_size, -1).double()).view(images.shape) / sigma
         yn_target = (yn + grad * (sigma_target - sigma)).detach()
         D_yn_target = net_target(yn_target, sigma_target, labels, augment_labels=augment_labels)
