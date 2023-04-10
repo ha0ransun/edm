@@ -124,7 +124,7 @@ def training_loop(
     stats_jsonl = None
     while True:
 
-        if loss_kwargs.class_name == 'training.loss.CTLoss':
+        if loss_kwargs.class_name == 'training.loss.CTLoss' or loss_kwargs.class_name == 'training.loss.TestLoss':
             N = int(np.ceil(np.sqrt(cur_nimg / (total_kimg * 1000) * ((s_1 + 1) ** 2 - s_0 ** 2) + s_0 ** 2)))
             loss_fn.N = N
         # Accumulate gradients.
