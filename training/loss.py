@@ -132,7 +132,7 @@ class TestLoss:
         sigma_target = all_sigma[rnd_idx]
         y, augment_labels = augment_pipe(images) if augment_pipe is not None else (images, None)
         yn = y + torch.randn_like(y) * sigma
-        cdist = torch.cdist(yn.view(b_size, -1), images.view(b_size, -1).double())
+        cdist = torch.cdist(yn.view(b_size, -1), images.view(b_size, -1).double()) ** 2
         logp = - 2 * cdist / (sigma + sigma_target).view(b_size, 1) ** 2
         logp += torch.diag(torch.ones_like(torch.diag(logp)) * scale)
         # b * 1 * b @ (b * 1 * d - 1 * b * d) = b * 1 * d -> b * d
