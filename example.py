@@ -47,7 +47,15 @@ def generate_image_grid(
     t_steps = (sigma_max ** (1 / rho) + step_indices / (num_steps - 1) * (sigma_min ** (1 / rho) - sigma_max ** (1 / rho))) ** rho
     t_steps = torch.cat([net.round_sigma(t_steps), torch.zeros_like(t_steps[:1])]) # t_N = 0
 
+
     # Main sampling loop.
+    x_next = latents.to(torch.float64) * t_steps[0]
+    for i, (t_cur, t_next) in tqdm.tqdm(list(enumerate(zip(t_steps[:-1], t_steps[1:]))), unit='step'):
+        x_cur = x_next
+        x_hat = net(x_cur, t_cur, class_labels).to(torch.float64)
+        x_next = x_hat + t_next * torch.randn_like(x_hat)
+
+    """
     x_next = latents.to(torch.float64) * t_steps[0]
     for i, (t_cur, t_next) in tqdm.tqdm(list(enumerate(zip(t_steps[:-1], t_steps[1:]))), unit='step'): # 0, ..., N-1
         x_cur = x_next
@@ -67,6 +75,7 @@ def generate_image_grid(
             denoised = net(x_next, t_next, class_labels).to(torch.float64)
             d_prime = (x_next - denoised) / t_next
             x_next = x_hat + (t_next - t_hat) * (0.5 * d_cur + 0.5 * d_prime)
+    """
 
     # Save image grid.
     print(f'Saving image grid to "{dest_path}"...')
@@ -81,10 +90,12 @@ def generate_image_grid(
 
 def main():
     model_root = 'https://nvlabs-fi-cdn.nvidia.com/edm/pretrained'
-    generate_image_grid(f'{model_root}/edm-cifar10-32x32-cond-vp.pkl',   'cifar10-32x32.png',  num_steps=18) # FID = 1.79, NFE = 35
-    generate_image_grid(f'{model_root}/edm-ffhq-64x64-uncond-vp.pkl',    'ffhq-64x64.png',     num_steps=40) # FID = 2.39, NFE = 79
-    generate_image_grid(f'{model_root}/edm-afhqv2-64x64-uncond-vp.pkl',  'afhqv2-64x64.png',   num_steps=40) # FID = 1.96, NFE = 79
-    generate_image_grid(f'{model_root}/edm-imagenet-64x64-cond-adm.pkl', 'imagenet-64x64.png', num_steps=256, S_churn=40, S_min=0.05, S_max=50, S_noise=1.003) # FID = 1.36, NFE = 511
+    for n in [2, 3, 6, 9, 12, 18, 30]:
+        generate_image_grid('/home/haoransun/edm/training-runs/00000-cifar10-32x32-uncond-ddpmpp-edm-gpus8-batch512-fp32/network-snapshot-075264.pkl',   f'cifar10-32x32-{n}.png',  num_steps=n) # FID = 1.79, NFE = 35
+    # generate_image_grid(f'{model_root}/edm-cifar10-32x32-cond-vp.pkl',   'cifar10-32x32.png',  num_steps=18) # FID = 1.79, NFE = 35
+    # generate_image_grid(f'{model_root}/edm-ffhq-64x64-uncond-vp.pkl',    'ffhq-64x64.png',     num_steps=40) # FID = 2.39, NFE = 79
+    # generate_image_grid(f'{model_root}/edm-afhqv2-64x64-uncond-vp.pkl',  'afhqv2-64x64.png',   num_steps=40) # FID = 1.96, NFE = 79
+    # generate_image_grid(f'{model_root}/edm-imagenet-64x64-cond-adm.pkl', 'imagenet-64x64.png', num_steps=256, S_churn=40, S_min=0.05, S_max=50, S_noise=1.003) # FID = 1.36, NFE = 511
 
 #----------------------------------------------------------------------------
 
