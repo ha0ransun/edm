@@ -133,12 +133,12 @@ def main(**kwargs):
         c.network_kwargs.class_name = 'training.networks.VEPrecond'
         c.loss_kwargs.class_name = 'training.loss.VELoss'
     elif opts.precond == 'ct':
-        c.network_kwargs.class_name = 'training.networks.EDMPrecond'
+        c.network_kwargs.class_name = 'training.networks.CTPrecond'
         c.loss_kwargs.class_name = 'training.loss.CTLoss'
         c.s_0 = opts.s_0
         c.s_1 = opts.s_1
     elif opts.precond == 'tt':
-        c.network_kwargs.class_name = 'training.networks.EDMPrecond'
+        c.network_kwargs.class_name = 'training.networks.CTPrecond'
         c.loss_kwargs.class_name = 'training.loss.TestLoss'
         c.s_0 = opts.s_0
         c.s_1 = opts.s_1
