@@ -714,3 +714,4 @@ class CTPrecond(torch.nn.Module):
         return D_x
 
     def round_sigma(self, sigma):
+        return torch.as_tensor(sigma)
